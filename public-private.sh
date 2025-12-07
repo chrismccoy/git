@@ -23,7 +23,6 @@ main() {
   printf "Fetching repository list from GitHub...\n"
 
   local repo_list
-
   repo_list=$(gh repo list --limit 1000 --json name,visibility \
     --jq '.[] | [.name, .visibility] | @tsv')
 
@@ -37,13 +36,13 @@ main() {
   local total_cloned=0
   local total_failed=0
 
-  while IFS=$'\t' read -r name visibility; do
+  while IFS=$'\t' read -r -u 9 name visibility; do
     local dest_dir
     case "${visibility^^}" in
       PUBLIC)
         dest_dir="public"
         ;;
-      PRIVATE)
+      PRIVATE|INTERNAL)
         dest_dir="private"
         ;;
       *)
@@ -60,14 +59,14 @@ main() {
       continue
     fi
 
-    if gh repo clone "$name" "$clone_path" -- --quiet; then
+    if gh repo clone "$name" "$clone_path" -- --quiet < /dev/null; then
       printf "  ✅ Successfully cloned.\n\n"
-      ((total_cloned++))
+      ((total_cloned+=1))
     else
       printf "  ❌ Failed to clone '%s'.\n\n" "$name" >&2
-      ((total_failed++))
+      ((total_failed+=1))
     fi
-  done <<< "$repo_list"
+  done 9<<< "$repo_list"
 
   printf -- "-----------------------------------------------------------------\n"
   printf "Clone process complete.\n"
